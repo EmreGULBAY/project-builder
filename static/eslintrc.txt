@@ -1,0 +1,52 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "extends": [
+    "plugin:@typescript-eslint/recommended",
+    "standard",
+    "plugin:prettier/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 13,
+    "sourceType": "module"
+  },
+  "plugins": [
+    "@typescript-eslint"
+  ],
+  "rules": {
+    "no-console": "warn",
+    "no-return-assign": "off",
+    "no-use-before-define": "off",
+    "prefer-const": "error",
+    "comma-dangle": "off",
+    "space-in-parens": [
+      "error",
+      "never"
+    ],
+    "indent": "off",
+    "no-process-env": "off",
+    "no-useless-constructor": "off",
+    "@typescript-eslint/no-empty-function": "off",
+    "@typescript-eslint/no-explicit-any": "warn",
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": "error",
+    "curly": [
+      "error",
+      "all"
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/*.test.ts",
+        "**/*.spec.ts"
+      ],
+      "env": {
+        "jest": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+name: Build and deploy {{project_name}}
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Log into ghcr.io registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build docker image
+        run: docker build -t ghcr.io/travelaps/{{project_name}}:v${{ github.run_number }} .
+
+      - name: Tag docker image latest
+        run: docker tag ghcr.io/travelaps/{{project_name}}:v${{ github.run_number }} ghcr.io/travelaps/{{project_name}}:latest
+
+      - name: Push docker image
+        run: |
+          docker push ghcr.io/travelaps/{{project_name}}:v${{ github.run_number }}
+          docker push ghcr.io/travelaps/{{project_name}}:latest
