@@ -64,5 +64,9 @@
     "boilerplate",
     "project-generator"
   ],
-  "type": "module"
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/emregulbay/project-builder.git"
+  }
 }
