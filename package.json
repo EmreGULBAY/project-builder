@@ -1,10 +1,10 @@
 {
   "name": "@travelaps/project-builder",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "dist/cli.js",
   "description": "A CLI tool to scaffold TypeScript projects with Express.js, Docker, and GitHub Actions support",
   "bin": {
-    "project-starter": "./dist/cli.js"
+    "my-starter2": "./dist/cli.js"
   },
   "license": "MIT",
   "dependencies": {

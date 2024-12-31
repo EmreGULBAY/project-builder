@@ -54,18 +54,47 @@ const EXPRESS_DEPENDENCIES = {
     dependencies: {
       express: "^4.18.2",
       dotenv: "^16.3.1",
+      "body-parser": "^1.20.2",
+      cors: "^2.8.5",
     },
     devDependencies: {
       "@types/express": "^4.17.21",
+      "@types/cors": "^2.8.17",
+      "@types/body-parser": "^1.19.5",
     },
   },
   legacy: {
     dependencies: {
       express: "^4.17.1",
       dotenv: "^8.2.0",
+      "body-parser": "^1.19.0",
+      cors: "^2.8.5",
     },
     devDependencies: {
       "@types/express": "^4.17.13",
+      "@types/cors": "^2.8.12",
+      "@types/body-parser": "^1.19.2",
+    },
+  },
+};
+
+const CLOUDFLARE_DEPENDENCIES = {
+  modern: {
+    dependencies: {
+      hono: "^3.11.7",
+    },
+    devDependencies: {
+      wrangler: "^3.22.1",
+      "@cloudflare/workers-types": "^4.20241224.0",
+    },
+  },
+  legacy: {
+    dependencies: {
+      hono: "^2.x",
+    },
+    devDependencies: {
+      wrangler: "^2.x",
+      "@cloudflare/workers-types": "^3.x",
     },
   },
 };
@@ -81,6 +110,7 @@ interface TemplateData {
     run_number: string;
     actor: string;
   };
+  compatibility_date: string;
 }
 
 function getCurrentNodeMajorVersion(): string {
@@ -115,7 +145,8 @@ function checkNodeVersion(): boolean {
 
 async function updatePackageJson(
   useExpress: boolean,
-  isNewNode: boolean
+  isNewNode: boolean,
+  useWrangler: boolean
 ): Promise<void> {
   const packageJsonPath = path.join(process.cwd(), "package.json");
   const packageJson = JSON.parse(
@@ -149,7 +180,35 @@ async function updatePackageJson(
     };
   }
 
+  if (useWrangler) {
+    packageJson.scripts = {
+      ...packageJson.scripts,
+      wranglerBuild: "wrangler build",
+      wranglerDev: "wrangler dev",
+      wranglerDeploy: "wrangler deploy",
+    };
+    const cloudflareDeps = CLOUDFLARE_DEPENDENCIES[versionType];
+    packageJson.dependencies = {
+      ...packageJson.dependencies,
+      ...cloudflareDeps.dependencies,
+    };
+    packageJson.devDependencies = {
+      ...packageJson.devDependencies,
+      ...cloudflareDeps.devDependencies,
+    };
+  }
+
   await fs.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2));
+}
+
+async function setupTypeScript(useWrangler: boolean): Promise<void> {
+  const templateName = useWrangler ? "wranglerTsconfig.txt" : "tsconfig.txt";
+  const templateContent = await readTemplateFile(templateName);
+  
+  await fs.writeFile(
+      path.join(process.cwd(), "tsconfig.json"),
+      templateContent
+  );
 }
 
 async function readTemplateFile(fileName: string): Promise<string> {
@@ -187,7 +246,7 @@ async function setupGitHubWorkflow(templateData: TemplateData): Promise<void> {
 
 async function init(): Promise<void> {
   console.log("🚀 Initializing project...\n");
-
+  
   const isNewNode = checkNodeVersion();
 
   const answers = await inquirer.prompt([
@@ -197,6 +256,12 @@ async function init(): Promise<void> {
       message: "Would you like to use Express.js in your project?",
       default: true,
     },
+    {
+      type: "confirm",
+      name: "useWrangler",
+      message: "Would you like to add Cloudflare Workers support?",
+      default: false,
+    }
   ]);
 
   try {
@@ -213,9 +278,13 @@ async function init(): Promise<void> {
         run_number: "{{ github.run_number }}",
         actor: "{{ github.actor }}",
       },
+      compatibility_date: new Date().toISOString().split("T")[0],
     };
 
     await createFileFromTemplate("docker.txt", "Dockerfile", templateData);
+    await createFileFromTemplate("dockerignore.txt", ".dockerignore", templateData);
+
+    await createFileFromTemplate("gitignore.txt", ".gitignore", templateData);
     await setupGitHubWorkflow(templateData);
     const gitignoreContent = await readTemplateFile("gitignore.txt");
     const eslintignoreContent = await readTemplateFile("eslintignore.txt");
@@ -223,6 +292,13 @@ async function init(): Promise<void> {
     const dockerignoreContent = await readTemplateFile("dockerignore.txt");
     const prettierrcContent = await readTemplateFile("prettierrc.txt");
     const readmeContent = await readTemplateFile("readme.txt");
+
+    if (answers.useWrangler) {
+      console.log("\n📦 Adding Cloudflare Workers support...");
+      await createFileFromTemplate("wrangler.txt", "wrangler.toml", templateData);
+      const indexContent = await readTemplateFile("index.txt");
+      await fs.writeFile(path.join(process.cwd(), "src/index.ts"), indexContent);
+    }
 
     if (answers.useExpress) {
       console.log("\n📦 Setting up Express.js with TypeScript...");
@@ -261,17 +337,16 @@ async function init(): Promise<void> {
       path.join(process.cwd(), ".prettierrc"),
       prettierrcContent
     );
-    await fs.writeFile(
-      path.join(process.cwd(), "README.md"),
-      readmeContent
-    );
+    await fs.writeFile(path.join(process.cwd(), "README.md"), readmeContent);
     const tsconfigContent = await readTemplateFile("tsconfig.txt");
     await fs.writeFile(
       path.join(process.cwd(), "tsconfig.json"),
       tsconfigContent
     );
 
-    await updatePackageJson(answers.useExpress, isNewNode);
+    await setupTypeScript(answers.useWrangler);
+
+    await updatePackageJson(answers.useExpress, isNewNode, answers.useWrangler);
 
     console.log("\n✅ Project setup completed!");
     console.log("\n📝 Next steps:");

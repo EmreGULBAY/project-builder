@@ -1,7 +1,12 @@
 import express, { Request, Response } from "express";
+import bodyParser from 'body-parser';
+import cors from 'cors';
 
 export const createServer = () => {
     const app = express();
+
+    app.use(bodyParser.json());
+    app.use(cors());
 
     app.get("/", (req: Request, res: Response) => {
         res.send("success");

@@ -1,0 +1,8 @@
+name = "{{project_name}}"
+main = "./src/index.ts"
+compatibility_date = "{{compatibility_date}}"
+
+compatibility_flags = ["nodejs_compat"]
+
+[observability.logs]
+enabled = true
